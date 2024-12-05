@@ -8,10 +8,10 @@ import socket
 #getphoneIP
 def get_local_ip():
     try:
-        # Se connecter à une adresse externe (Google DNS ici)
+        # Connects to an external adress (Google DNS here)
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-            s.connect(("8.8.8.8", 80))  # Adresse IP et port ne sont pas réellement utilisés
-            local_ip = s.getsockname()[0]  # Récupère l'adresse IP locale
+            s.connect(("8.8.8.8", 80)) 
+            local_ip = s.getsockname()[0]  # Gets local IP
         return local_ip
     except Exception as e:
         return f"Erreur : {e}"
