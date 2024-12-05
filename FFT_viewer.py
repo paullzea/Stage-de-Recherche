@@ -1,4 +1,4 @@
-from oscpy.server import OSCThreadServer
+from oscpy.server import OSCThreadServer # type: ignore
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import numpy as np
