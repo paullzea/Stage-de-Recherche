@@ -21,7 +21,25 @@ print("\n", "Your IP address is:", get_local_ip(),"\n","please enter your IP add
 #constants
 period = 10**-3
 fs = 1 / period
-buffer_size = 500
+buffer_size = 2000
+fc= 500 #define the HP frequence 
+RC=1/(2*np.pi*fc)
+signal_filtered=[]
+
+# Initialize signal buffer
+signal = [0] * buffer_size
+signal_filtered=[0] * buffer_size
+t=[0] * buffer_size
+i=0
+
+#HP the given signal
+def HP(signal, dt):
+    global RC, signal_filtered
+    alpha = RC / (RC + dt)
+    for i in range(1, buffer_size):
+        signal_filtered[i] = alpha * signal_filtered[i-1] + alpha * (signal[i] - signal[i-1])
+    return signal_filtered
+
 
 # Create and start OSC server
 osc = OSCThreadServer(encoding="utf8")
@@ -51,14 +69,18 @@ ax.set_title('Frequency Spectrum')
 
 # Update function for animation
 def update_plot(frame):
-    global signal
-    global fs
+    global signal, fs, signal_buffered, signal_filtered
+
     signal_buffered=signal[-buffer_size:len(signal)]
-    # Compute FFT
+    #Redefine delta t for precision over OSC communication speed
     delta_t_average=(t[buffer_size-1]-t[0])/(buffer_size-1)
     if(len(t) > buffer_size):
         fs=1/delta_t_average
-    fft_values = np.fft.fft(signal_buffered)
+    #HP
+    signal_filtered[0]=signal_buffered[0]
+    signal_filtered=HP(signal_buffered, delta_t_average)
+    #Compute FFT
+    fft_values = np.fft.fft(signal_filtered)
     amplitude_spectrum = np.abs(fft_values) / len(fft_values)
     frequencies = np.fft.fftfreq(len(fft_values), 1 / fs)
     
