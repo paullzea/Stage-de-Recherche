@@ -5,6 +5,7 @@ from matplotlib.animation import FuncAnimation
 import numpy as np
 import time
 import socket
+from utilities import fft_animation
 
 #getphoneIP
 def get_local_ip():
@@ -61,41 +62,8 @@ osc.bind('/comote/0/devicemotion', get_acceleration)
 
 # Setup Matplotlib figure
 fig, ax = plt.subplots()
-line, = ax.plot([], [], lw=2) #empty lists because no initial x and y data for the line, lw defines line width
-ax.set_xlabel('Frequency (Hz)')
-ax.set_ylabel('Amplitude')
-ax.set_title('Frequency Spectrum')
-
-# Update function for animation
-def update_plot(frame):
-    global signal, fs, signal_buffered, signal_filtered, dt, dtt
-    signal_buffered=signal[-buffer_size:len(signal)]
-    dtt=dt[-buffer_size:len(dt)]
-    #Redefine delta t for precision over OSC communication speed
-    delta_t_average=np.mean(dtt)
-    print(delta_t_average)
-    #if(len(dt) > buffer_size):
-    fs=1/delta_t_average
-    
-    #HP
-    signal_filtered=[0] * buffer_size
-    signal_filtered[0]=signal_buffered[0]
-    HP(signal_buffered, delta_t_average)
-
-    #Compute FFT
-    fft_values = np.fft.fft(signal_filtered)
-    amplitude_spectrum = np.abs(fft_values) / len(fft_values)
-    frequencies = np.fft.fftfreq(len(fft_values), 1 / fs)
-    
-    # Update line data
-    line.set_data(frequencies[:len(frequencies)//2], amplitude_spectrum[:len(amplitude_spectrum)//2])
-    ax.set_xlim(0, 20)
-    ax.set_ylim(0, 25)
-    return line,
-
-# Animation
-anim = FuncAnimation(fig, update_plot, interval=1000/24, blit=True)
-
+anime = fft_animation(signal, dt, ax, fig, buffer_size)
+print(type(anime))
 plt.show()
 
 # Cleanup after stopping

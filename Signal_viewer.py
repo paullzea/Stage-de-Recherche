@@ -1,6 +1,7 @@
 from oscpy.server import OSCThreadServer  # type: ignore
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
+from utilities import HighPassFilter
 import numpy as np
 import socket
 
@@ -25,23 +26,17 @@ print("Listening for OSC messages...")
 
 
 N = 100  # Window size
-signal = [0] * N
 signal_filtered = [0] * N
-fc = 2  # cutoff frequency
-RC = 1 / (2 * np.pi * fc)
+fc = 1  # cutoff frequency
+hpfilter = HighPassFilter(fc, 0.010)
 
 def get_acceleration(*values):
     global signal, signal_filtered, RC
-    dt = values[0]*10**(-3)  # time interval
-    signal_now = values[1]  
-    signal.append(signal_now)
-    signal = signal[-N:]  #only keep window size array
-
-    # HP filter
-    alpha = RC / (RC + dt)
-    filtered_value = alpha * (signal_filtered[-1] + signal_now - signal[-2])
+    hpfilter.dt = values[0]*10**(-3)  # time interval
+    filtered_value = hpfilter.apply(values[1])
     signal_filtered.append(filtered_value)
     signal_filtered = signal_filtered[-N:]  #only keep window size array
+    osc.send_message('/intensity', (filtered_value, ), "127.0.0.1", 8099)
 
 osc.bind('/comote/0/devicemotion', get_acceleration)
 
