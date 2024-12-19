@@ -1,3 +1,4 @@
+""" Made by Paul, Leo, and, Victor"""
 
 from oscpy.server import OSCThreadServer # type: ignore
 import matplotlib.pyplot as plt
