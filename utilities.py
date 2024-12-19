@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import numpy as np
+import socket
 
 
 def fft_animation(signal, dt, ax, fig, buffer_size):
@@ -59,3 +60,13 @@ class LowPassFilter:
         return filtered_sample
 
 
+
+
+#get local ip (this function was made by chatgpt)
+def get_local_ip():
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("8.8.8.8", 80))
+            return s.getsockname()[0]
+    except Exception as e:
+        return f"Erreur : {e}"
