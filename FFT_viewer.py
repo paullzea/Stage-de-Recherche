@@ -1,9 +1,11 @@
+
 from oscpy.server import OSCThreadServer # type: ignore
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import numpy as np
 import time
 import socket
+from utilities import fft_animation
 
 #getphoneIP
 def get_local_ip():
@@ -21,7 +23,23 @@ print("\n", "Your IP address is:", get_local_ip(),"\n","please enter your IP add
 #constants
 period = 10**-3
 fs = 1 / period
-buffer_size = 500
+buffer_size = 256
+fc=2 #define the HP frequence 
+RC=1/(2*np.pi*fc)
+signal_filtered=[]
+dt=[]
+
+# Initialize signal buffer
+signal = [0] * buffer_size
+signal_filtered=[0] * buffer_size
+i=0
+
+#HP the given signal
+def HP(signal, dt):
+    global RC, signal_filtered
+    alpha = RC / (RC + dt)
+    for i in range(1, buffer_size):
+        signal_filtered[i] = alpha * (signal_filtered[i-1] + signal[i] - signal[i-1])
 
 # Create and start OSC server
 osc = OSCThreadServer(encoding="utf8")
@@ -30,47 +48,22 @@ print("listening")
 
 # Initialize signal buffer
 signal = [0] * buffer_size
-t=[0] * buffer_size
+dtt=[0] * buffer_size
 i=0
 
 # Update function for incoming OSC messages
 def get_acceleration(*values):
-    global signal
-    t=time.time() #only for delta_t
+    global signal, dt
     signal.append(values[1])
+    dt.append(values[0]*10**(-3))
 
 #every time an osc devicemotion comes, the get_acceleration fonction is called
 osc.bind('/comote/0/devicemotion', get_acceleration)
 
 # Setup Matplotlib figure
 fig, ax = plt.subplots()
-line, = ax.plot([], [], lw=2) #empty lists because no initial x and y data for the line, lw defines line width
-ax.set_xlabel('Frequency (Hz)')
-ax.set_ylabel('Amplitude')
-ax.set_title('Frequency Spectrum')
-
-# Update function for animation
-def update_plot(frame):
-    global signal
-    global fs
-    signal_buffered=signal[-buffer_size:len(signal)]
-    # Compute FFT
-    delta_t_average=(t[buffer_size-1]-t[0])/(buffer_size-1)
-    if(len(t) > buffer_size):
-        fs=1/delta_t_average
-    fft_values = np.fft.fft(signal_buffered)
-    amplitude_spectrum = np.abs(fft_values) / len(fft_values)
-    frequencies = np.fft.fftfreq(len(fft_values), 1 / fs)
-    
-    # Update line data
-    line.set_data(frequencies[:len(frequencies)//2], amplitude_spectrum[:len(amplitude_spectrum)//2])
-    ax.set_xlim(0, 30)
-    ax.set_ylim(0, 25)
-    signal_buffered.clear()
-    return line,
-
-# Animation
-anim = FuncAnimation(fig, update_plot, interval=1000/24, blit=True)
+anime = fft_animation(signal, dt, ax, fig, buffer_size)
+print(type(anime))
 plt.show()
 
 # Cleanup after stopping
