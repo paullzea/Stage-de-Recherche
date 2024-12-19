@@ -29,8 +29,8 @@ signal_filtered = [0] * N
 fcHP = 1  # cutoff frequency, High Pass filter
 fcLP = 25  # cutoff frequency, Low Pass filter
 
-hpfilter = HighPassFilter(fc, 0.010)
-lpfilter = LowPassFilter(fc, 0.010)
+hpfilter = HighPassFilter(fcHP, 0.010)
+lpfilter = LowPassFilter(fcLP, 0.010)
 
 def get_acceleration(*values):
     global signal, signal_filtered, RC
