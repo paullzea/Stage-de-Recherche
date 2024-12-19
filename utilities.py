@@ -42,3 +42,20 @@ class HighPassFilter:
         self.previous_output = filtered_sample
         self.previous_sample = sample
         return filtered_sample
+    
+class LowPassFilter:
+    def __init__(self, cutoff_frequency, dt):
+        self.fc = cutoff_frequency
+        self.rc = 1 / (2 * np.pi * self.fc)
+        self.dt = dt
+        self.previous_output = 0
+        self.previous_sample = 0
+
+    def apply(self, sample):
+        alpha = self.dt / (self.rc + self.dt)
+        filtered_sample = alpha * sample + (1-alpha) * self.previous_sample
+        self.previous_output = filtered_sample
+        self.previous_sample = sample
+        return filtered_sample
+
+
