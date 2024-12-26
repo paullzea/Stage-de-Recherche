@@ -2,9 +2,8 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import numpy as np
 import socket
-import time
 
-"""
+
 def fft_animation(signal, dt, ax, fig, buffer_size):
     line, = ax.plot([], [], lw=2) #empty lists because no initial x and y data for the line, lw defines line width
     ax.set_xlabel('Frequency (Hz)')
@@ -29,7 +28,7 @@ def fft_animation(signal, dt, ax, fig, buffer_size):
         plot_fft(buffer, delta_t_average, ax, line)
         return line,
     return FuncAnimation(fig, update_plot, interval=1000/24, blit=True)
-"""
+
 
 class HighPassFilter:
     def __init__(self, cutoff_frequency, dt):
@@ -68,7 +67,7 @@ class Visualizer:
         self.line = None  # Initialiser la ligne
         self.direction = direction
 
-    def plot_FFT(self, xrangemin = 0, xrangemax = 20,  yrangemin = 0,  yrangemax = 25 ):
+    def plot_fft(self, xrangemin = 0, xrangemax = 20,  yrangemin = 0,  yrangemax = 25 ):
         self.line, = self.ax.plot([], [], lw=2)
         self.ax.set_xlabel('Frequency (Hz)')
         self.ax.set_ylabel('Amplitude')
@@ -76,9 +75,8 @@ class Visualizer:
         self.ax.set_xlim(xrangemin, xrangemax)
         self.ax.set_ylim(yrangemin, yrangemax)
         
-        return FuncAnimation(self.fig, self.update_plot_fft, interval=1000/24, blit=True) #si je return FuncAnimation il faudra créer dans le
-                                                                                      #programme principale un objet anim = visualizer.plot_FFT(dt=0.1)
-                                                                                      #puis exécuter plt.show
+        return FuncAnimation(self.fig, self.update_plot_fft, interval=1000/24, blit=True) #si je return FuncAnimation il faudra créer dans le #programme principale un objet anim = visualizer.plot_FFT(dt=0.1) #puis exécuter plt.show
+                                                                                                                                                   
     # Fonction interne pour mettre à jour l'animation
     def update_plot_fft(self, frame):
         delta_t_average = np.mean(self.buffer[0,0:])
@@ -90,25 +88,73 @@ class Visualizer:
         self.line.set_data(frequencies[:len(frequencies)//2], amplitude_spectrum[:len(amplitude_spectrum)//2])
         return self.line,
     
+
+
+
+
+
     def plot_time(self, duration = 15, refresh_rate = 24 ):
-        time_list = self.buffer[0,0:]
+        time_list = np.cumsum(self.buffer[0, :])
         point_list = self.buffer[self.direction,0:]
         self.line = self.ax.plot(time_list, point_list)[0]
         self.ax.set_xlim([0, duration])  # Limites initiales de l'axe x
-        self.ax.set_ylim([-20, 20])  # Limites initiales de l'axe y
+        self.ax.set_ylim([-30, 30])  # Limites initiales de l'axe y
         # Animation
-        anim = FuncAnimation(self.fig, self.update_plot_time, frames = duration * refresh_rate, interval=1000 / refresh_rate) #autre méthode,
-        plt.show()                                                                                      # la fonction ne renvoie rien mais lance 
-                                                                                                        #automatiquement l'animation
-                                                                                                        #quelle méthode est la mieux?
+        return FuncAnimation(self.fig, self.update_plot_time, frames = duration * refresh_rate, interval=1000 / refresh_rate)
+
     def update_plot_time(self, frame, xrange = 15):
-        if self.buffer[0,-1] > xrange: #je veux a voir une fenêtre glissante
-             self.ax.set_xlim(self.buffer[0,-1-xrange], self.buffer[0,-1])  # Décalage de l'axe
-        else:
-            self.ax.set_xlim(0, xrange)
+        # time_list = np.cumsum(self.buffer[0, :])
+        # if time_list[0,-1] > xrange: #je veux a voir une fenêtre glissante
+        #      self.ax.set_xlim(self.buffer[0,-1-xrange], self.buffer[0,-1])  # Décalage de l'axe
+        # else:
+        #     self.ax.set_xlim(0, xrange)
         
-        self.line.set_data(self.buffer[0,0:],self.buffer[self.direction,0,:])
+        # self.line.set_data(self.buffer[0, :], self.buffer[self.direction, :])
+        # return self.line,
+        time_list = np.cumsum(self.buffer[0, :])    
+        # Vérification si la fenêtre glissante doit être appliquée
+        # if time_list[-1] > xrange:
+        #     # Déterminer l'index correspondant à la borne inférieure de la fenêtre
+        #     start_index = np.searchsorted(time_list, time_list[-1] - xrange)
+        #     time_window = time_list[start_index:]
+        #     point_window = self.buffer[self.direction, start_index:]
+        # else:
+        #     # Si pas assez de temps pour une fenêtre complète, afficher tout
+        #     time_window = time_list
+        #     point_window = self.buffer[self.direction, :]
+
+        # Mettre à jour les données du tracé
+        point_window = self.buffer[self.direction, :]
+        time_window = time_list
+
+        self.line.set_data(time_window, point_window)
+        # Mettre à jour les limites de l'axe x
+        self.ax.set_xlim(time_window[0], time_window[-1])
         return self.line,
+
+
+
+
+
+class Buffer:
+    def __init__(self, N, M):
+        self.line_number = N
+        self.column_number = M
+        self.buffer = np.zeros((N, M))
+    def push(self, signal):
+        if len(signal) != self.line_number:
+            raise ValueError(f"Expected data length {self.line_number}, got {len(signal)}")
+        self.buffer = np.roll(self.buffer, -1, axis=1)
+        self.buffer[:, -1] = signal
+
+    
+    def __getitem__(self, index):
+        return self.buffer[index]
+    #to print
+    def __str__(self):
+        buffer_preview = np.array_str(self.buffer, precision=2, suppress_small=True)
+        return (f"Buffer with shape ({self.line_number}, {self.column_number}):\n"
+                f"{buffer_preview}")
 
 #get local ip (this function was made by chatgpt)
 def get_local_ip():

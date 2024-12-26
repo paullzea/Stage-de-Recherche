@@ -39,7 +39,7 @@ def get_acceleration(*values):
     print(values,end="\r")
     signal_filtered.append(filtered_value)
     signal_filtered = signal_filtered[-N:]  #only keep window size array
-    osc.send_message('/intensity', (filtered_value, ), "0.0.0.0", 8098)
+    osc.send_message('/intensity', (filtered_value, ), "127.0.0.1", 8098)
 
 osc.bind('/comote/0/devicemotion', get_acceleration)
 
