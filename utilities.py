@@ -3,6 +3,31 @@ from matplotlib.animation import FuncAnimation
 import numpy as np
 import socket
 
+class Buffer:
+    def __init__(self, N, M):
+        self.line_number = N
+        self.column_number = M
+        self.buffer = np.zeros((N, M))
+
+    def push(self, signal):
+        if isinstance(signal, float):
+            self.buffer = np.roll(self.buffer, -1, axis=1)
+            self.buffer[:, -1] = signal
+        elif len(signal) == self.line_number:
+            self.buffer = np.roll(self.buffer, -1, axis=1)
+            self.buffer[:, -1] = signal
+        else:
+            raise ValueError(f"Expected data of length {self.line_number} or a float, but got {type(signal).__name__}")
+        
+    def __getitem__(self, index):
+        return self.buffer[index]
+    
+    #to print
+    def __str__(self):
+        buffer_preview = np.array_str(self.buffer, precision=2, suppress_small=True)
+        return (f"Buffer with shape ({self.line_number}, {self.column_number}):\n"
+                f"{buffer_preview}")
+
 class HighPassFilter:
     def __init__(self, cutoff_frequency, dt):
         self.fc = cutoff_frequency
@@ -32,6 +57,20 @@ class LowPassFilter:
         self.previous_output = filtered_sample
         self.previous_sample = sample
         return filtered_sample
+    
+class Intensity:
+    def __init__(self, raw_datas):
+        self.raw_datas = raw_datas
+        self.buffer = Buffer(1,10) #change avarage value
+
+    def mai(self):
+        intensity_sample = np.linalg.norm(self.raw_datas[1:,-1])
+        self.buffer.push(intensity_sample)
+        return np.mean(self.buffer.buffer)
+    
+    def mai_noaverage(self):
+        intensity_sample = np.linalg.norm(self.raw_datas[1,-1])
+        return intensity_sample
 
 class Visualizer:
     def __init__(self, buffer, direction, dt_initial):
@@ -40,34 +79,6 @@ class Visualizer:
         self.line = None  # Initialiser la ligne
         self.direction = direction
         self.dt_initial = dt_initial
-
-    def plot_fft(self, dt_initial, xrangemin = 0, xrangemax = 20,  yrangemin = 0,  yrangemax = 25):
-        self.line, = self.ax.plot([], [], lw=2)
-        self.ax.set_xlabel('Frequency (Hz)')
-        self.ax.set_ylabel('Amplitude')
-        self.ax.set_title('Frequency Spectrum')
-        # #Compute FFT 
-        # fft_values = np.fft.fft(self.buffer[self.direction,0:])
-        # amplitude_spectrum = np.abs(fft_values) / len(fft_values)
-        # frequencies = np.fft.fftfreq(len(fft_values), dt_initial)
-        # # Update line data
-        # self.line.set_data(frequencies[:len(frequencies)//2], amplitude_spectrum[:len(amplitude_spectrum)//2])
-        self.ax.set_xlim(0, 20)
-        self.ax.set_ylim(0, 25)
-        return FuncAnimation(self.fig, self.update_plot_fft, interval=1000/24, blit=True, cache_frame_data=False)
-                                                                                                                                                   
-    # Fonction interne pour mettre à jour l'animation
-    def update_plot_fft(self, frame):
-        dt_average = np.mean(self.buffer[0,0:])*10**(-3) #ms to s
-        if dt_average <= 0 or np.isnan(dt_average):
-            dt_average = self.dt_initial
-        # Calcul de la FFT
-        fft_values = np.fft.fft(self.buffer[self.direction,0:])
-        amplitude_spectrum = np.abs(fft_values) / len(fft_values)
-        frequencies = np.fft.fftfreq(len(fft_values), dt_average)
-        # Mise à jour des données de la ligne
-        self.line.set_data(frequencies[:len(frequencies)//2], amplitude_spectrum[:len(amplitude_spectrum)//2])
-        return self.line,
 
     def plot_time(self, duration = 15, refresh_rate = 24 ):
         time_list = np.cumsum(self.buffer[0, :])
@@ -108,25 +119,33 @@ class Visualizer:
         self.ax.set_xlim(time_window[0], time_window[-1])
         return self.line,
 
-class Buffer:
-    def __init__(self, N, M):
-        self.line_number = N
-        self.column_number = M
-        self.buffer = np.zeros((N, M))
-    def push(self, signal):
-        if len(signal) != self.line_number:
-            raise ValueError(f"Expected data length {self.line_number}, got {len(signal)}")
-        self.buffer = np.roll(self.buffer, -1, axis=1)
-        self.buffer[:, -1] = signal
-
-    
-    def __getitem__(self, index):
-        return self.buffer[index]
-    #to print
-    def __str__(self):
-        buffer_preview = np.array_str(self.buffer, precision=2, suppress_small=True)
-        return (f"Buffer with shape ({self.line_number}, {self.column_number}):\n"
-                f"{buffer_preview}")
+    def plot_fft(self, dt_initial, xrangemin = 0, xrangemax = 20,  yrangemin = 0,  yrangemax = 25):
+        self.line, = self.ax.plot([], [], lw=2)
+        self.ax.set_xlabel('Frequency (Hz)')
+        self.ax.set_ylabel('Amplitude')
+        self.ax.set_title('Frequency Spectrum')
+        # #Compute FFT 
+        # fft_values = np.fft.fft(self.buffer[self.direction,0:])
+        # amplitude_spectrum = np.abs(fft_values) / len(fft_values)
+        # frequencies = np.fft.fftfreq(len(fft_values), dt_initial)
+        # # Update line data
+        # self.line.set_data(frequencies[:len(frequencies)//2], amplitude_spectrum[:len(amplitude_spectrum)//2])
+        self.ax.set_xlim(0, 20)
+        self.ax.set_ylim(0, 25)
+        return FuncAnimation(self.fig, self.update_plot_fft, interval=1000/24, blit=True, cache_frame_data=False)
+                                                                                                                                        
+    # Fonction interne pour mettre à jour l'animation
+    def update_plot_fft(self, frame):
+        dt_average = np.mean(self.buffer[0,0:])*10**(-3) #ms to s
+        if dt_average <= 0:
+            dt_average = self.dt_initial
+        # Calcul de la FFT
+        fft_values = np.fft.fft(self.buffer[self.direction,0:])
+        amplitude_spectrum = np.abs(fft_values) / len(fft_values)
+        frequencies = np.fft.fftfreq(len(fft_values), dt_average)
+        # Mise à jour des données de la ligne
+        self.line.set_data(frequencies[:len(frequencies)//2], amplitude_spectrum[:len(amplitude_spectrum)//2])
+        return self.line,
 
 #get local ip (this function was made by chatgpt)
 def get_local_ip():
