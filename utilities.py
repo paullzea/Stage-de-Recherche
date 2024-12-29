@@ -59,9 +59,9 @@ class LowPassFilter:
         return filtered_sample
     
 class Intensity:
-    def __init__(self, raw_datas):
+    def __init__(self, average_count, raw_datas):
         self.raw_datas = raw_datas
-        self.buffer = Buffer(1,10) #change avarage value
+        self.buffer = Buffer(1, average_count) #change avarage value
 
     def mai(self):
         intensity_sample = np.linalg.norm(self.raw_datas[1:,-1])
